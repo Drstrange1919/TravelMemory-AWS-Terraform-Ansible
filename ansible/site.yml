@@ -66,7 +66,7 @@
       block:
         - name: Write temporary root-only JS bootstrap script
           ansible.builtin.template:
-            src: templates/bootstrap_mongo.js.j2
+            src: configuration/bootstrap_mongo.js.j2
             dest: /root/travelmemory-bootstrap.js
             mode: '0600'
           no_log: true
@@ -91,7 +91,7 @@
 
     - name: Enable MongoDB authentication and private network binding
       ansible.builtin.template:
-        src: templates/mongod.conf.j2
+        src: configuration/mongod.conf.j2
         dest: /etc/mongod.conf
         owner: root
         group: root
@@ -198,7 +198,7 @@
 
     - name: Write backend config with authenticated private MongoDB URI
       ansible.builtin.template:
-        src: templates/backend.env.j2
+        src: configuration/backend.env.j2
         dest: /opt/travelmemory/backend/.env
         owner: ubuntu
         group: ubuntu
@@ -207,7 +207,7 @@
 
     - name: Install backend systemd service
       ansible.builtin.template:
-        src: templates/travelmemory.service.j2
+        src: configuration/travelmemory.service.j2
         dest: /etc/systemd/system/travelmemory.service
         owner: root
         group: root
@@ -309,7 +309,7 @@
 
     - name: Install reverse proxy configuration
       ansible.builtin.template:
-        src: templates/nginx.conf.j2
+        src: configuration/nginx.conf.j2
         dest: /etc/nginx/sites-available/travelmemory
         owner: root
         group: root

@@ -114,7 +114,6 @@ Terraform creates **23 AWS resources** in the initial deployment plan, including
 TravelMemory-AWS-Terraform-Ansible/
 ├── .gitignore
 ├── README.md
-├── Beginner_Setup_Guide.pdf
 ├── terraform/
 │   ├── main.tf
 │   ├── variables.tf
@@ -125,7 +124,7 @@ TravelMemory-AWS-Terraform-Ansible/
 ├── ansible/
 │   ├── ansible.cfg
 │   ├── site.yml
-│   └── templates/
+│   └── configuration/
 │       ├── backend.env.j2
 │       ├── bootstrap_mongo.js.j2
 │       ├── mongod.conf.j2
@@ -389,7 +388,7 @@ Do not remove the Terraform state *before* cleanup. Keep it private and do not c
 | --- | --- |
 | AWS architecture using Terraform | [`terraform/`](terraform/) |
 | Public/private subnets, NAT/IGW, routes, EC2 and IAM | [`terraform/main.tf`](terraform/main.tf) |
-| Configuration and deployment with Ansible | [`ansible/site.yml`](ansible/site.yml) and [`ansible/templates/`](ansible/templates/) |
+| Configuration and deployment with Ansible | [`ansible/site.yml`](ansible/site.yml) and [`ansible/configuration/`](ansible/configuration/) |
 | Automated deployment, verification and teardown | [`scripts/`](scripts/) |
 | Final implementation report | [`report/Implementation_Report.md`](report/Implementation_Report.md) / [PDF](report/Implementation_Report.pdf) — records actual deployment, validation, evidence and cleanup |
 | Screenshots of infrastructure, app and automation | [Screenshots section](#project-screenshots) and [`screenshots/`](screenshots/) |

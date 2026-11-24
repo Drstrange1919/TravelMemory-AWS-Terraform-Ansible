@@ -1,10 +1,10 @@
 # Implementation Report: TravelMemory MERN Application on AWS
 
-**Project:** Deployment of a MERN application using Terraform and Ansible
-**Prepared by:** Drstrange1919 (GitHub project owner)
-**Completed:** 24 November 2026
-**AWS region:** Asia Pacific (Mumbai), `ap-south-1`
-**Repository:** [https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible](https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible)
+- **Project:** Deployment of a MERN application using Terraform and Ansible
+- **Prepared by:** Drstrange1919 (GitHub project owner)
+- **Completed:** 24 November 2026
+- **AWS region:** Asia Pacific (Mumbai), `ap-south-1`
+- **Repository:** [https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible](https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible)
 **Project status:** **Deployment demonstrated and infrastructure cleaned up**
 
 > **Historical deployment evidence.** The TravelMemory web application was deployed and tested on 24 November 2026, then the lab infrastructure was intentionally destroyed to avoid ongoing AWS charges. The temporary public endpoint mentioned below is **no longer live**. No credentials, private SSH keys, MongoDB passwords or Terraform state are included in this report.
@@ -115,7 +115,7 @@ The preflight script verified the AWS identity, existing EC2 SSH key, SSH CIDR, 
 
 ## 5. Ansible configuration and deployment
 
-The project used [`ansible/site.yml`](../ansible/site.yml) and templates in [`ansible/templates/`](../ansible/templates/). The deployment script generated an inventory from Terraform outputs, used the public web host as the SSH jump host to reach the private database host, and ran the Ansible playbook.
+The project used [`ansible/site.yml`](../ansible/site.yml) and templates in [`ansible/configuration/`](../ansible/configuration/). The deployment script generated an inventory from Terraform outputs, used the public web host as the SSH jump host to reach the private database host, and ran the Ansible playbook.
 
 ### 5.1 MongoDB database host
 
