@@ -1,0 +1,351 @@
+---
+- name: Configure private MongoDB EC2
+  hosts: database
+  become: true
+  gather_facts: false
+  vars:
+    mongo_admin_password: "{{ lookup('ansible.builtin.env', 'MONGO_ADMIN_PASSWORD') }}"
+    mongo_app_password: "{{ lookup('ansible.builtin.env', 'MONGO_APP_PASSWORD') }}"
+  tasks:
+    - name: Wait for first boot / SSH to become ready
+      ansible.builtin.wait_for_connection:
+        timeout: 360
+      become: false
+
+    - name: Require both MongoDB passwords (never store secrets in Git)
+      ansible.builtin.assert:
+        that:
+          - mongo_admin_password | length >= 16
+          - mongo_app_password | length >= 16
+          - mongo_admin_password != mongo_app_password
+        fail_msg: "Export distinct MONGO_ADMIN_PASSWORD and MONGO_APP_PASSWORD (16+ characters) before running."
+      no_log: true
+
+    - name: Install initial apt packages
+      ansible.builtin.apt:
+        name: [curl, gnupg, ca-certificates, git]
+        state: present
+        update_cache: true
+
+    - name: Download the official MongoDB 8.0 signing key
+      ansible.builtin.get_url:
+        url: https://www.mongodb.org/static/pgp/server-8.0.asc
+        dest: /tmp/mongodb-server-8.0.asc
+        mode: '0644'
+
+    - name: Convert MongoDB signing key to keyring
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg /tmp/mongodb-server-8.0.asc
+        creates: /usr/share/keyrings/mongodb-server-8.0.gpg
+
+    - name: Configure MongoDB official apt repository for Ubuntu 24.04
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse"
+        filename: mongodb-org-8.0
+        state: present
+
+    - name: Install MongoDB server and shell
+      ansible.builtin.apt:
+        name: mongodb-org
+        state: present
+        update_cache: true
+
+    - name: Start MongoDB initially on localhost for one-time user bootstrap
+      ansible.builtin.systemd_service:
+        name: mongod
+        enabled: true
+        state: started
+
+    - name: Check whether MongoDB users were previously initialized
+      ansible.builtin.stat:
+        path: /var/lib/mongodb/.travelmemory_users_bootstrapped
+      register: mongo_bootstrap_marker
+
+    - name: Bootstrap MongoDB users exactly once
+      when: not mongo_bootstrap_marker.stat.exists
+      block:
+        - name: Write temporary root-only JS bootstrap script
+          ansible.builtin.template:
+            src: templates/bootstrap_mongo.js.j2
+            dest: /root/travelmemory-bootstrap.js
+            mode: '0600'
+          no_log: true
+
+        - name: Create admin and application users while MongoDB is localhost-only
+          ansible.builtin.command: mongosh --quiet --file /root/travelmemory-bootstrap.js
+          no_log: true
+
+        - name: Record bootstrap completion
+          ansible.builtin.file:
+            path: /var/lib/mongodb/.travelmemory_users_bootstrapped
+            state: touch
+            owner: mongodb
+            group: mongodb
+            mode: '0600'
+      always:
+        - name: Delete temporary script containing database passwords
+          ansible.builtin.file:
+            path: /root/travelmemory-bootstrap.js
+            state: absent
+          no_log: true
+
+    - name: Enable MongoDB authentication and private network binding
+      ansible.builtin.template:
+        src: templates/mongod.conf.j2
+        dest: /etc/mongod.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart mongod
+
+    - name: Apply final MongoDB config before configuring web app
+      ansible.builtin.meta: flush_handlers
+
+    - name: Ensure MongoDB is enabled
+      ansible.builtin.systemd_service:
+        name: mongod
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart mongod
+      ansible.builtin.systemd_service:
+        name: mongod
+        state: restarted
+
+- name: Install web tools and deploy Express + React on public EC2
+  hosts: web
+  become: true
+  gather_facts: false
+  vars:
+    mongo_app_password: "{{ lookup('ansible.builtin.env', 'MONGO_APP_PASSWORD') }}"
+    source_repository: https://github.com/UnpredictablePrashant/TravelMemory.git
+  tasks:
+    - name: Wait for first boot / SSH to become ready
+      ansible.builtin.wait_for_connection:
+        timeout: 360
+      become: false
+
+    - name: Require database password
+      ansible.builtin.assert:
+        that: ["mongo_app_password | length >= 16"]
+        fail_msg: "Export MONGO_APP_PASSWORD before running."
+      no_log: true
+
+    - name: Install Nginx, Git, curl and GPG
+      ansible.builtin.apt:
+        name: [nginx, git, curl, ca-certificates, gnupg]
+        state: present
+        update_cache: true
+
+    - name: Download official NodeSource repository signing key
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+        dest: /tmp/nodesource.asc
+        mode: '0644'
+
+    - name: Convert NodeSource signing key to apt keyring
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /usr/share/keyrings/nodesource.gpg /tmp/nodesource.asc
+        creates: /usr/share/keyrings/nodesource.gpg
+
+    - name: Set Node.js 22 LTS package repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main"
+        filename: nodesource
+        state: present
+
+    - name: Install Node.js and npm
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+
+    - name: Ensure repository location is owned by ubuntu
+      ansible.builtin.file:
+        path: /opt/travelmemory
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Clone assigned TravelMemory repository
+      ansible.builtin.git:
+        repo: "{{ source_repository }}"
+        dest: /opt/travelmemory
+        version: main
+        update: true
+      become_user: ubuntu
+
+    - name: Determine whether backend has an npm lockfile
+      ansible.builtin.stat:
+        path: /opt/travelmemory/backend/package-lock.json
+      register: backend_lockfile
+
+    - name: Install backend npm dependencies from lockfile
+      ansible.builtin.command: npm ci --omit=dev --no-audit --no-fund
+      args:
+        chdir: /opt/travelmemory/backend
+      become_user: ubuntu
+      when: backend_lockfile.stat.exists
+
+    - name: Install backend npm dependencies (fallback without lockfile)
+      ansible.builtin.command: npm install --omit=dev --no-audit --no-fund
+      args:
+        chdir: /opt/travelmemory/backend
+      become_user: ubuntu
+      when: not backend_lockfile.stat.exists
+
+    - name: Write backend config with authenticated private MongoDB URI
+      ansible.builtin.template:
+        src: templates/backend.env.j2
+        dest: /opt/travelmemory/backend/.env
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+      no_log: true
+
+    - name: Install backend systemd service
+      ansible.builtin.template:
+        src: templates/travelmemory.service.j2
+        dest: /etc/systemd/system/travelmemory.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start (or restart) the backend service
+      ansible.builtin.systemd_service:
+        name: travelmemory
+        enabled: true
+        daemon_reload: true
+        state: restarted
+
+    - name: Create frontend production environment variables
+      ansible.builtin.copy:
+        dest: /opt/travelmemory/frontend/.env.production
+        content: "REACT_APP_BACKEND_URL=http://{{ ansible_host }}\n"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    # Web t3.small has 2 GiB RAM. A local 2 GiB swapfile makes npm build more robust.
+    # Swap lives on the existing EBS root volume; no new AWS volume is created.
+    - name: Allocate swapfile if not already present
+      ansible.builtin.command: fallocate -l 2G /swapfile
+      args:
+        creates: /swapfile
+      register: swap_created
+
+    - name: Restrict swapfile permissions
+      ansible.builtin.file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Format new swapfile
+      ansible.builtin.command: mkswap /swapfile
+      when: swap_created.changed
+
+    - name: Persist swap across reboot
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
+
+    - name: Inspect active swap
+      ansible.builtin.command: swapon --show=NAME --noheadings
+      register: existing_swap
+      changed_when: false
+
+    - name: Enable swapfile when not yet active
+      ansible.builtin.command: swapon /swapfile
+      when: "'/swapfile' not in existing_swap.stdout"
+
+    - name: Check for frontend npm lockfile
+      ansible.builtin.stat:
+        path: /opt/travelmemory/frontend/package-lock.json
+      register: frontend_lockfile
+
+    - name: Install React dependencies from lockfile
+      ansible.builtin.command: npm ci --no-audit --no-fund
+      args:
+        chdir: /opt/travelmemory/frontend
+      become_user: ubuntu
+      when: frontend_lockfile.stat.exists
+
+    - name: Install React dependencies (fallback without lockfile)
+      ansible.builtin.command: npm install --no-audit --no-fund
+      args:
+        chdir: /opt/travelmemory/frontend
+      become_user: ubuntu
+      when: not frontend_lockfile.stat.exists
+
+    - name: Build static React frontend
+      ansible.builtin.command: npm run build
+      args:
+        chdir: /opt/travelmemory/frontend
+      environment:
+        CI: 'false'
+        NODE_OPTIONS: '--max-old-space-size=1536'
+      become_user: ubuntu
+
+    - name: Create website directory
+      ansible.builtin.file:
+        path: /var/www/travelmemory
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy compiled React application into Nginx web directory
+      ansible.builtin.copy:
+        src: /opt/travelmemory/frontend/build/
+        dest: /var/www/travelmemory/
+        remote_src: true
+        owner: root
+        group: root
+        mode: preserve
+
+    - name: Install reverse proxy configuration
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/travelmemory
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Remove default Nginx website
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Enable TravelMemory Nginx website
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/travelmemory
+        dest: /etc/nginx/sites-enabled/travelmemory
+        state: link
+
+    - name: Verify Nginx syntax
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Restart Nginx and enable on boot
+      ansible.builtin.systemd_service:
+        name: nginx
+        enabled: true
+        state: restarted
+
+    - name: Verify end-to-end API + MongoDB health over local reverse proxy
+      ansible.builtin.uri:
+        url: http://127.0.0.1/health
+        method: GET
+        status_code: 200
+      register: app_health
+      retries: 12
+      delay: 5
+      until: app_health.status == 200
+
+    - name: Display deployment website
+      ansible.builtin.debug:
+        msg: "TravelMemory deployed: http://{{ ansible_host }} (API health: http://{{ ansible_host }}/health)"

@@ -1,0 +1,10 @@
+// Run only on localhost BEFORE MongoDB authorization is enabled.
+// File is root-only and deleted by Ansible immediately after use.
+const adminDb = db.getSiblingDB('admin');
+const adminPass = {{ mongo_admin_password | to_json }};
+const appPass = {{ mongo_app_password | to_json }};
+adminDb.createUser({user: 'tm_admin', pwd: adminPass, roles: [{role: 'root', db: 'admin'}]});
+if (!adminDb.auth('tm_admin', adminPass)) throw new Error('Admin authentication failed');
+const appDb = db.getSiblingDB('travelmemory');
+appDb.createUser({user: 'tm_app', pwd: appPass, roles: [{role: 'readWrite', db: 'travelmemory'}]});
+print('MongoDB admin and application users created');

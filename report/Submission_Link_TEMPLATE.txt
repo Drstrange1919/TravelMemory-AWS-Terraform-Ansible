@@ -1,0 +1,6 @@
+Assignment: Deploying a MERN Application Through Terraform and Ansible
+GitHub repository URL: https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME
+Website URL during demonstration: http://YOUR_EC2_PUBLIC_IP
+
+Replace placeholders with your actual repository link and deployed website URL.
+Submit this text file or paste the GitHub link in Vlearn as instructed.

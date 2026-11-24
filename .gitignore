@@ -1,0 +1,46 @@
+# Terraform state can include infrastructure metadata and secrets.
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/tfplan
+**/terraform.tfvars
+**/crash.log
+**/crash.*.log
+
+# Never commit your keys, credentials, or generated inventories.
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+**/terraform-output.json
+ansible/inventory.ini
+ansible/ssh_config
+
+# Downloads / local application artifacts
+node_modules/
+build/
+.DS_Store
+*.log
+screenshots/*.png
+screenshots/*.jpg
+screenshots/*.jpeg
+
+__pycache__/
+*.pyc
+
+# Automated deployment kit (keep local secrets and helper backups out of Git)
+.travelmemory-secrets
+**/terraform.tfvars.backup
+**/terraform.tfvars.bak
+
+# Windows download metadata
+*:Zone.Identifier
+
+# Duplicate automation kit
+/TravelMemory_AWS_Deployment_Automation_Kit/
+
+# Include assignment screenshots in GitHub
+!screenshots/*.jpeg
+!screenshots/*.jpg
+!screenshots/*.png
