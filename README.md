@@ -2,9 +2,9 @@
 
 **Infrastructure as Code | Configuration Management | AWS EC2 | VPC | MongoDB | Node.js | React | Nginx**
 
-> **Assignment status: Deployment and automated verification completed on 24 November 2026.** Terraform provisioned the AWS infrastructure, and Ansible configured both EC2 instances and deployed the TravelMemory application. Screenshots captured during the deployment are included below. The demo URL uses an EC2 public IP and may stop working after the lab is destroyed.
+> **Project status: Successfully deployed, tested, and cleaned up on 24 November 2026.** Terraform provisioned 23 AWS resources, Ansible configured both EC2 instances, and the TravelMemory web app passed the API/database health check. The Terraform cleanup subsequently destroyed all 23 resources. **The temporary demo URL is no longer live.** Screenshots below preserve the deployment evidence.
 
-This project deploys the open-source [TravelMemory MERN application by UnpredictablePrashant](https://github.com/UnpredictablePrashant/TravelMemory) to AWS using **Terraform** for infrastructure and **Ansible** for server configuration. The web application is publicly accessible over HTTP during the lab; MongoDB remains in a private subnet with authentication enabled.
+This repository documents the successful deployment of the open-source [TravelMemory MERN application by UnpredictablePrashant](https://github.com/UnpredictablePrashant/TravelMemory) to AWS using **Terraform** for infrastructure and **Ansible** for server configuration. During the lab, Nginx made the web application accessible over HTTP, while authenticated MongoDB remained in a private subnet. The AWS infrastructure has since been removed to avoid ongoing charges.
 
 ## Table of contents
 
@@ -19,12 +19,12 @@ This project deploys the open-source [TravelMemory MERN application by Unpredict
 9. [Project screenshots](#project-screenshots)
 10. [Troubleshooting](#troubleshooting)
 11. [Cost management and cleanup](#cost-management-and-cleanup)
-12. [Assignment deliverables](#assignment-deliverables)
+12. [Project artifacts](#project-artifacts)
 13. [Acknowledgements](#acknowledgements)
 
 ## Project objectives
 
-The assignment was to:
+This project was built to:
 
 - Create a custom **AWS VPC** with one public and one private subnet using Terraform.
 - Configure an **Internet Gateway**, **NAT Gateway**, and the required routing.
@@ -32,7 +32,7 @@ The assignment was to:
 - Restrict SSH access to the administrator's public IP and permit database access only from the web server.
 - Use Ansible to install and configure **Node.js, Express, React, Nginx, and MongoDB**.
 - Configure MongoDB authentication, application environment variables, the reverse proxy, and persistent system services.
-- Verify the functioning application, document the infrastructure, and capture screenshots for submission.
+- Verify the functioning application, document the infrastructure, and capture deployment screenshots.
 
 ## Architecture
 
@@ -266,7 +266,7 @@ For an active deployment, open the output website URL in a browser. The EC2 publ
 
 ## Verification and results
 
-The deployment output captured on **24 November 2026** reported:
+The deployment output captured on **24 November 2026** reported the following results **before cleanup**:
 
 | Verification | Observed outcome |
 | --- | --- |
@@ -278,7 +278,7 @@ The deployment output captured on **24 November 2026** reported:
 | Backend and MongoDB health | `{"status":"ok","db":"connected"}` |
 | User interface | Homepage and a sample travel-memory screenshot included below |
 
-The screenshot of the example memory is provided as assignment evidence. This README records deployment-time observations; it does not claim that the demo remains online indefinitely.
+The screenshots document the running deployment. The test URL was an ephemeral EC2 public IP and **does not work after the infrastructure was destroyed**.
 
 ### Main application API endpoints
 
@@ -301,7 +301,7 @@ curl -fsS "$(cd terraform && terraform output -raw website_url)/health"
 
 ## Project screenshots
 
-The images below are included using **relative paths**, so they render automatically in GitHub after the `screenshots/` folder has been pushed. If an image does not appear, verify that the filename and letter case match exactly.
+The seven images below use **relative paths**, so GitHub can display them alongside the README when the `screenshots/` directory is pushed. Filenames and capitalization must match exactly.
 
 ### 1. TravelMemory homepage
 
@@ -368,32 +368,32 @@ sudo journalctl -u travelmemory -n 50 --no-pager
 
 ## Cost management and cleanup
 
-This lab used an **AWS budget of $12/month** with alert rules and promotional credits. The budget **does not automatically stop spending**. EC2, EBS storage, public IPv4 and particularly the NAT Gateway may consume credits until removed. Any credits, pricing or Free Tier eligibility depend on the AWS account and current AWS terms.
+This lab configured a **$12/month AWS budget** with an alert rule and promotional credits. A budget is **not a hard spending limit**. EC2, EBS storage, public IPv4 and the NAT Gateway can accrue usage charges while running. Credit eligibility and AWS prices depend on the account and current terms.
 
-Once all screenshots and assignment evidence are saved, destroy the deployment from the repository root:
+**Actual cleanup result (24 November 2026):** Terraform reported `Destroy complete! Resources: 23 destroyed.` A subsequent `terraform state list` printed no resources, and running the cleanup script again reported `Resources: 0 destroyed.` This confirms that the Terraform-tracked infrastructure was removed. AWS Console and billing should still be checked for any separately created resources or delayed charges.
+
+For future redeployments, once the lab screenshots are saved, destroy the resources from the repository root:
 
 ```bash
 export AWS_PROFILE=travelmemory-deploy
 bash scripts/cleanup.sh
 ```
 
-The cleanup script displays the Terraform-managed resources and requires typing `DESTROY`. It runs `terraform destroy` for the resources tracked by this project's state. **The demo website will stop working**, and trip data stored on the EC2 volumes will be lost. Afterward, verify that the EC2 instances, NAT Gateway, associated Elastic IP, and volumes have been removed in the AWS Console.
+The cleanup script displays the Terraform-managed resources and requires typing `DESTROY`. It runs `terraform destroy` for the resources tracked by this project's state. **The demo website will stop working**, and trip data stored on the EC2 volumes will be lost. Afterward, confirm in the AWS Console that no project EC2 instances, NAT Gateways, allocated Elastic IPs, or unattached EBS volumes remain. Billing data may update after a delay.
 
 Do not remove the Terraform state *before* cleanup. Keep it private and do not commit it to GitHub.
 
-## Assignment deliverables
+## Project artifacts
 
-| Assignment requirement | Evidence in repository |
+| Artifact | Evidence in repository |
 | --- | --- |
 | AWS architecture using Terraform | [`terraform/`](terraform/) |
 | Public/private subnets, NAT/IGW, routes, EC2 and IAM | [`terraform/main.tf`](terraform/main.tf) |
 | Configuration and deployment with Ansible | [`ansible/site.yml`](ansible/site.yml) and [`ansible/templates/`](ansible/templates/) |
 | Automated deployment, verification and teardown | [`scripts/`](scripts/) |
-| Implementation report | [`report/Implementation_Report_TEMPLATE.md`](report/Implementation_Report_TEMPLATE.md) / [PDF](report/Implementation_Report_TEMPLATE.pdf) — **template; update with your final deployment information before submitting** |
+| Implementation report templates | [`report/Implementation_Report_TEMPLATE.md`](report/Implementation_Report_TEMPLATE.md) / [PDF](report/Implementation_Report_TEMPLATE.pdf) — provided as starter templates, **not a finalized report** |
 | Screenshots of infrastructure, app and automation | [Screenshots section](#project-screenshots) and [`screenshots/`](screenshots/) |
 | GitHub repository | This repository: [TravelMemory-AWS-Terraform-Ansible](https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible) |
-
-**Submission note:** Share the GitHub repository URL through the submission format required by your course. The report template is included but should be finalized with your actual results.
 
 ## Acknowledgements
 
