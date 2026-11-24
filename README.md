@@ -141,9 +141,9 @@ TravelMemory-AWS-Terraform-Ansible/
 │   ├── generate_inventory.py
 │   └── plan_summary.py
 ├── report/
-│   ├── Implementation_Report_TEMPLATE.md
-│   ├── Implementation_Report_TEMPLATE.pdf
-│   └── Submission_Link_TEMPLATE.txt
+│   ├── Implementation_Report.md
+│   ├── Implementation_Report.pdf
+│   └── Submission_Link.txt
 └── screenshots/
     ├── Ansible.jpeg
     ├── EC2instances.jpeg
@@ -391,7 +391,7 @@ Do not remove the Terraform state *before* cleanup. Keep it private and do not c
 | Public/private subnets, NAT/IGW, routes, EC2 and IAM | [`terraform/main.tf`](terraform/main.tf) |
 | Configuration and deployment with Ansible | [`ansible/site.yml`](ansible/site.yml) and [`ansible/templates/`](ansible/templates/) |
 | Automated deployment, verification and teardown | [`scripts/`](scripts/) |
-| Implementation report templates | [`report/Implementation_Report_TEMPLATE.md`](report/Implementation_Report_TEMPLATE.md) / [PDF](report/Implementation_Report_TEMPLATE.pdf) — provided as starter templates, **not a finalized report** |
+| Final implementation report | [`report/Implementation_Report.md`](report/Implementation_Report.md) / [PDF](report/Implementation_Report.pdf) — records actual deployment, validation, evidence and cleanup |
 | Screenshots of infrastructure, app and automation | [Screenshots section](#project-screenshots) and [`screenshots/`](screenshots/) |
 | GitHub repository | This repository: [TravelMemory-AWS-Terraform-Ansible](https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible) |
 

@@ -1,0 +1,7 @@
+TravelMemory MERN Application - Terraform and Ansible on AWS
+GitHub repository: https://github.com/Drstrange1919/TravelMemory-AWS-Terraform-Ansible
+
+Deployment status: Completed and verified on 24 November 2026.
+The AWS infrastructure was intentionally destroyed after screenshots were collected.
+Final implementation report: report/Implementation_Report.pdf
+Screenshots: screenshots/
